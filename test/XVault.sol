@@ -3,13 +3,13 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Test.sol";
 
-import "src/XVaults.sol";
+import "src/XVault.sol";
 
 contract TestContract is Test {
-    XVaults v;
+    XVault v;
 
     function setUp() public {
-        v = new XVaults();
+        v = new XVault();
     }
 
     function testBar() public {
