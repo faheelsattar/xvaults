@@ -19,13 +19,17 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {IStrategy} from "./interfaces/IStrategy.sol";
 
 //custom errors
-error FeeToHigh();
+error FeeTooHigh();
+error ArrayEmpty();
+error ZeroAddress();
 
 contract XVault is ERC4626 {
     //perfomance fees
     uint256 public fee;
 
-    uint256 public maxStrategies;
+    uint256 public constant MAX_STRATEGIES = 20;
+
+    address[MAX_STRATEGIES] public withdrawalQueue;
 
     struct StrategyData {
         bool trusted;
@@ -35,8 +39,8 @@ contract XVault is ERC4626 {
     mapping(IStrategy => StrategyData) public queryStrategy;
 
     //events
-
     event FeeUpdated(address indexed user, uint256 newFeePercent);
+    event WithdrawlQueueUpdated(address[] queue);
 
     constructor(ERC20 _asset)
         ERC4626(
@@ -48,9 +52,10 @@ contract XVault is ERC4626 {
         )
     {}
 
-    function initialize(uint256 _fee, uint256 _maxStrategies) external {
+    //only be called once after constructor
+    function initialize(uint256 _fee) external {
+        if (_fee > 1e18) revert FeeToHigh();
         fee = _fee;
-        maxStrategies = _maxStrategies;
     }
 
     //set fee percentage
@@ -58,5 +63,22 @@ contract XVault is ERC4626 {
         if (_fee > 1e18) revert FeeToHigh();
         fee = _fee;
         emit FeeUpdated(msg.sender, _fee);
+    }
+
+    //withdrawl queue for retrieving from strategies
+    function addWithdrawlQueue(address calldata _queue) external {
+        if (_queue.length == 0) revert ArrayEmpty();
+
+        uint256 i = 0;
+        for (i; i < _queue.length; ) {
+            if (_queue[i] == address(0)) revert ZeroAddress();
+            withdrawalQueue[i] = _queue[i];
+
+            unchecked {
+                ++i;
+            }
+        }
+
+        emit WithdrawlQueueUpdated(_queue);
     }
 }
