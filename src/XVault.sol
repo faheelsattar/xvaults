@@ -18,17 +18,25 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 //interfaces
 import {IStrategy} from "./interfaces/IStrategy.sol";
 
+//custom errors
+error FeeToHigh();
+
 contract XVault is ERC4626 {
     //perfomance fees
     uint256 public fee;
 
+    uint256 public maxStrategies;
+
     struct StrategyData {
-        //total bit packed = 8 + 248 = 256
-        bool trusted; //8 bits
-        uint248 balance; //248 bits
+        bool trusted;
+        uint248 balance;
     }
 
     mapping(IStrategy => StrategyData) public queryStrategy;
+
+    //events
+
+    event FeeUpdated(address indexed user, uint256 newFeePercent);
 
     constructor(ERC20 _asset)
         ERC4626(
@@ -39,4 +47,16 @@ contract XVault is ERC4626 {
             string(abi.encodePacked("X", _asset.symbol()))
         )
     {}
+
+    function initialize(uint256 _fee, uint256 _maxStrategies) external {
+        fee = _fee;
+        maxStrategies = _maxStrategies;
+    }
+
+    //set fee percentage
+    function setFeePercent(uint256 _fee) external {
+        if (_fee > 1e18) revert FeeToHigh();
+        fee = _fee;
+        emit FeeUpdated(msg.sender, _fee);
+    }
 }
